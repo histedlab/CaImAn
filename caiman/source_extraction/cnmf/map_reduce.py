@@ -123,7 +123,7 @@ def cnmf_patches(args_in):
 
     logger.info('file loaded')
 
-    if (np.sum(np.abs(np.diff(images.reshape(timesteps, -1).T)))) > 0.1:
+    if (np.nansum(np.abs(np.diff(images.reshape(timesteps, -1).T)))) > 0.1:
 
         cnm = cnmf.CNMF(n_processes=1, k=options['init_params']['K'], gSig=options['init_params']['gSig'], gSiz=options['init_params']['gSiz'],
                         merge_thresh=options['merging']['thr'], p=p, dview=None, Ain=None, Cin=None,
@@ -156,6 +156,8 @@ def cnmf_patches(args_in):
                 cnm.b, cnm.C, cnm.f, cnm.S, cnm.bl, cnm.c1,
                 cnm.neurons_sn, cnm.g, cnm.sn, cnm.options, cnm.YrA]
     else:
+        raise RuntimeError('cannot merge if there are empty patches - as of 180418.  Needs fixing')
+
         return None
 
 
@@ -339,11 +341,16 @@ def run_CNMF_patches(file_name, shape, options, rf=16, stride=4, gnb=1, dview=No
     # instead of filling in the matrices, construct lists with their non-zero
     # entries and coordinates
     print('Transforming patches into full matrix')
-    for fff in file_res:
+    for (iF,fff) in enumerate(file_res):
         if fff is not None:
 
             idx_, shapes, A, b, C, f, S, bl, c1, neurons_sn, g, sn, _, YrA = fff
             A = A.tocsc()
+
+            # check A for nans
+            nNan = np.isnan(A.data).sum()
+            if nNan > 0:
+                raise RuntimeError('found %d/%d nans in A' % (nNan,len(A.data)))  # later may wish to remove
 
             sn_tot[idx_] = sn
             f_tot.append(f)
@@ -380,7 +387,7 @@ def run_CNMF_patches(file_name, shape, options, rf=16, stride=4, gnb=1, dview=No
         else:
             empty += 1
 
-    print('Skipped %d Empty Patch', empty)
+    print('Skipped %d Empty Patches', empty)
     if count_bgr > 0:
         idx_tot_B = np.concatenate(idx_tot_B)
         b_tot = np.concatenate(b_tot)
