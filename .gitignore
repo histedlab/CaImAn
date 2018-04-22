@@ -1,3 +1,5 @@
+*.cpp
+/old-demo
 
 # Created by https://www.gitignore.io/api/macos,python,windows
 
@@ -184,3 +186,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/macos,python,windows
+
