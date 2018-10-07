@@ -248,7 +248,8 @@ def start_server(slurm_script=None, ipcluster="ipcluster", ncpus=None):
     if slurm_script is None:
         if ipcluster == "ipcluster":
             subprocess.Popen(
-                "ipcluster start -n {0}".format(ncpus), shell=True, close_fds=(os.name != 'nt'))
+                "ipcluster start -n {0} -- --location=localhost".format(ncpus), # localhost needed b/c default listen only on 127.0.0.1 not external ips
+                shell=True, close_fds=(os.name != 'nt'))
         else:
             subprocess.Popen(shlex.split(
                 "{0} start -n {1}".format(ipcluster, ncpus)), shell=True, close_fds=(os.name != 'nt'))
@@ -258,8 +259,10 @@ def start_server(slurm_script=None, ipcluster="ipcluster", ncpus=None):
         while len(client) < ncpus:  # client len will get longer as workers start and connect to hub
             time.sleep(0.5)
         logger.debug('Making sure everything is up and running')
-        client.direct_view().execute('__a=1', block=True)  # when done on all, we're set to go
+        ar = client.direct_view().apply_async(lambda x:x+1,10)
+        ar.get(timeout=10)  # when done on all, we're set to go.  10s timeout
         client.close()
+        logger.debug('Cluster started successfully.')
 
     else:
         shell_source(slurm_script)
